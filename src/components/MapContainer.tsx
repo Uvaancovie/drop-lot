@@ -4,7 +4,7 @@ import { MapPin, Navigation, Plus, Info, RefreshCw } from 'lucide-react';
 
 interface MapContainerProps {
   notes: Note[];
-  currentLocation: { latitude: number; longitude: number };
+  currentLocation: { latitude: number; longitude: number } | null;
   onMapClick?: (lat: number, lng: number) => void;
   onSelectNote?: (note: Note) => void;
   selectedNote: Note | null;
@@ -84,11 +84,11 @@ export default function MapContainer({
     if (!isGmapsLoaded || !mapRef.current || useMockMap) return;
 
     try {
-      const sfCenter = { lat: currentLocation.latitude, lng: currentLocation.longitude };
+      const center = currentLocation ? { lat: currentLocation.latitude, lng: currentLocation.longitude } : { lat: 37.7749, lng: -122.4194 };
       
       // Initialize Map
       const map = new window.google.maps.Map(mapRef.current, {
-        center: sfCenter,
+        center: center,
         zoom: 14,
         styles: [
           { elementType: 'geometry', stylers: [{ color: '#242f3e' }] },
@@ -137,8 +137,9 @@ export default function MapContainer({
       });
 
       // Render driver marker
+      const driverPos = currentLocation ? { lat: currentLocation.latitude, lng: currentLocation.longitude } : center;
       const driverMarker = new window.google.maps.Marker({
-        position: sfCenter,
+        position: driverPos,
         map: map,
         title: 'Your Location',
         icon: {
@@ -210,7 +211,7 @@ export default function MapContainer({
   };
 
   // Convert active driver coordinates to percentages for placement on simulated radar grid
-  const driverXY = getXY(currentLocation.latitude, currentLocation.longitude);
+  const driverXY = currentLocation ? getXY(currentLocation.latitude, currentLocation.longitude) : null;
 
   const handleMockClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!onMapClick || !mapRef.current) return;
@@ -238,7 +239,7 @@ export default function MapContainer({
         <div className="flex items-center gap-2">
           <Navigation className="w-4 h-4 text-sky-400 animate-pulse" />
           <span className="text-xs font-mono font-medium text-slate-300">
-            RADIR Driving HUD - {currentLocation.latitude.toFixed(4)}°, {currentLocation.longitude.toFixed(4)}°
+            RADIR Driving HUD - {currentLocation ? `${currentLocation.latitude.toFixed(4)}°, ${currentLocation.longitude.toFixed(4)}°` : 'Awaiting GPS...'}
           </span>
         </div>
         
@@ -323,6 +324,7 @@ export default function MapContainer({
             })}
 
             {/* Live active driver coordinates marker */}
+            {driverXY && (
             <div
               style={{ left: `${driverXY.x}%`, top: `${driverXY.y}%` }}
               className="absolute -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-none"
@@ -336,6 +338,7 @@ export default function MapContainer({
                 </div>
               </div>
             </div>
+            )}
           </div>
         ) : (
           /* Google Maps Live State */

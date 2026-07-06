@@ -24,7 +24,7 @@ export default function App() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [notes, setNotes] = useState<Note[]>([]);
-  const [currentLocation, setCurrentLocation] = useState({ latitude: -29.715799, longitude: 30.991301 });
+  const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [isOffline, setIsOffline] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
@@ -413,14 +413,9 @@ export default function App() {
 
             {/* Lower Voice Console HUD controls */}
             <DriveAssistant
-              notes={notes}
               onAddNote={handleAddNote}
               currentLocation={currentLocation}
               setCurrentLocation={setCurrentLocation}
-              isOffline={isOffline}
-              setIsOffline={setIsOffline}
-              pushNotifications={pushNotifications}
-              onAddNotification={addNotification}
             />
           </div>
         ) : (
