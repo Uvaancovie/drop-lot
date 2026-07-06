@@ -61,13 +61,8 @@ export default function App() {
   useEffect(() => {
     if (!userProfile) return;
 
-    let q;
-    // Admins can listen to all driving notes globally; regular drivers only see their own
-    if (userProfile.role === 'admin') {
-      q = query(collection(db, 'notes'));
-    } else {
-      q = query(collection(db, 'notes'), where('userId', '==', userProfile.uid));
-    }
+    // Each user only sees their own notes
+    const q = query(collection(db, 'notes'), where('userId', '==', userProfile.uid));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const remoteNotes: Note[] = [];
@@ -252,6 +247,11 @@ export default function App() {
       await signOut(auth);
     } catch (err) {
       console.error('Signout failed:', err);
+    }
+    // Clear all user-specific localStorage to prevent stale data leaks between sessions
+    if (userProfile) {
+      localStorage.removeItem(`notes_${userProfile.uid}`);
+      localStorage.removeItem(`profile_${userProfile.uid}`);
     }
     setUserProfile(null);
     setNotes([]);

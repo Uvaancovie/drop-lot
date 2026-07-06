@@ -7,30 +7,51 @@ import {
   Car, Wifi, WifiOff, Bell, ArrowRight, Zap, RefreshCw, Layers, Volume2
 } from 'lucide-react';
 
-function getGeocodedAddress(lat: number, lng: number): { address: string; regionBreadcrumb: string } {
-  // If close to Durban
-  if (Math.abs(lat - (-29.715799)) < 0.005 && Math.abs(lng - 30.991301) < 0.005) {
+async function reverseGeocode(lat: number, lng: number): Promise<{ address: string; regionBreadcrumb: string } | null> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&addressdetails=1`,
+      { headers: { 'User-Agent': 'RADIR-Drive/1.0' } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data || !data.display_name) return null;
+    const addr = data.address || {};
+    const parts = [
+      addr.city || addr.town || addr.village || addr.county || '',
+      addr.state || '',
+      addr.country || ''
+    ].filter(Boolean);
     return {
-      address: '189 Aberdare Drive, Phoenix Industrial, Durban, 4068, South Africa',
-      regionBreadcrumb: 'South Africa, KwaZulu-Natal · eThekwini · Durban'
+      address: data.display_name,
+      regionBreadcrumb: parts.join(' · ')
     };
+  } catch {
+    return null;
   }
+}
 
-  // Find closest preset from presetLocations
-  let closest = presetLocations[0];
-  let minDist = Infinity;
-  for (const preset of presetLocations) {
-    const d = Math.pow(preset.latitude - lat, 2) + Math.pow(preset.longitude - lng, 2);
-    if (d < minDist) {
-      minDist = d;
-      closest = preset;
-    }
-  }
+let geocodeCache = new Map<string, { address: string; regionBreadcrumb: string }>();
 
-  return {
-    address: closest.address,
-    regionBreadcrumb: closest.regionBreadcrumb || 'USA, California · San Francisco County · San Francisco'
+function getGeocodedAddress(lat: number, lng: number): { address: string; regionBreadcrumb: string } {
+  const key = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+  const cached = geocodeCache.get(key);
+  if (cached) return cached;
+
+  // Fallback: show raw coordinates instead of a misleading preset address
+  const fallback = {
+    address: `${lat.toFixed(6)}, ${lng.toFixed(6)} (reverse geocoding pending)`,
+    regionBreadcrumb: `${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`
   };
+
+  // Fire-and-forget: resolve asynchronously and cache
+  reverseGeocode(lat, lng).then((result) => {
+    if (result) {
+      geocodeCache.set(key, result);
+    }
+  });
+
+  return fallback;
 }
 
 interface DriveAssistantProps {
