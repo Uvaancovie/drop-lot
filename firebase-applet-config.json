@@ -1,0 +1,10 @@
+{
+  "projectId": "drop-lot",
+  "appId": "1:486963509410:web:b667965862f598144cbffb",
+  "apiKey": "AIzaSyCAMF4Q79l84bfdB0P84YBjSmsQp80SIOE",
+  "authDomain": "drop-lot.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "drop-lot.firebasestorage.app",
+  "messagingSenderId": "486963509410",
+  "measurementId": ""
+}

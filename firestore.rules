@@ -1,0 +1,82 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Check user role in Firestore
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isUserAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserRole() == 'admin';
+    }
+
+    // 2. User Profiles rules
+    match /users/{userId} {
+      allow read: if isSignedIn() && (userId == request.auth.uid || isUserAdmin());
+      allow create: if isSignedIn() && userId == request.auth.uid && isValidUser(incoming());
+      // Block users from modifying their own roles
+      allow update: if isSignedIn() && userId == request.auth.uid && isValidUser(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'email'])
+      );
+      allow delete: if isUserAdmin();
+    }
+
+    function isValidUser(data) {
+      return data.uid == request.auth.uid
+        && data.email is string
+        && data.email.size() <= 128
+        && data.role is string
+        && (data.role == 'driver' || data.role == 'admin')
+        && (data.get('displayName', null) == null || (data.get('displayName', null) is string && data.get('displayName', '').size() <= 128));
+    }
+
+    // 3. Notes collection rules
+    match /notes/{noteId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isUserAdmin());
+      allow create: if isSignedIn() && isValidId(noteId) && isValidNote(incoming()) && incoming().userId == request.auth.uid;
+      allow update: if isSignedIn() && isValidId(noteId) && resource.data.userId == request.auth.uid && isValidNote(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['category', 'transcription', 'address'])
+      );
+      allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isUserAdmin());
+    }
+
+    function isValidNote(data) {
+      return data.id is string
+        && data.id.size() <= 128
+        && data.userId == request.auth.uid
+        && data.latitude is number
+        && data.longitude is number
+        && data.category is string
+        && data.category.size() <= 64
+        && data.transcription is string
+        && data.transcription.size() <= 1000
+        && (data.get('address', null) == null || (data.get('address', null) is string && data.get('address', '').size() <= 256))
+        && (data.get('voiceCommand', null) == null || (data.get('voiceCommand', null) is string && data.get('voiceCommand', '').size() <= 256))
+        && (data.get('audioDuration', null) == null || data.get('audioDuration', null) is number)
+        && data.createdAt is string;
+    }
+  }
+}

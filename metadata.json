@@ -1,0 +1,6 @@
+{
+  "name": "Driving Location Voice Notes Recorder",
+  "description": "A hands-free driving assistant to record location-based audio notes, tag business properties, visualize data points on interactive Google Maps with real-time sync, and export detailed CSV/PDF reports.",
+  "requestFramePermissions": ["microphone", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

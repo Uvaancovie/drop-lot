@@ -1,0 +1,45 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with role-based access control.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique user ID matching Firebase Auth UID." },
+        "email": { "type": "string", "description": "User email address." },
+        "displayName": { "type": "string", "description": "User profile full name." },
+        "role": { "type": "string", "enum": ["driver", "admin"], "description": "The security and workspace access role." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp." }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Note": {
+      "title": "Note",
+      "description": "Location-based voice note recorded by the driver.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique record identifier." },
+        "userId": { "type": "string", "description": "UID of the recording user." },
+        "latitude": { "type": "number", "description": "GPS latitude." },
+        "longitude": { "type": "number", "description": "GPS longitude." },
+        "address": { "type": "string", "description": "Reverse-geocoded premises address or custom landmark label." },
+        "category": { "type": "string", "description": "User tag category, e.g., 'interesting', 'commercial', 'hazard'." },
+        "transcription": { "type": "string", "description": "Transcribed voice audio text content." },
+        "voiceCommand": { "type": "string", "description": "Voice command string used (if any)." },
+        "audioDuration": { "type": "number", "description": "Duration of voice recording in seconds." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp." }
+      },
+      "required": ["id", "userId", "latitude", "longitude", "category", "transcription", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile nodes restricted to self-reading and self-writing."
+    },
+    "/notes/{noteId}": {
+      "schema": "Note",
+      "description": "Location notes. Drivers can write and read their own notes; Admins can read and delete all notes."
+    }
+  }
+}
