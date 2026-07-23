@@ -411,12 +411,16 @@ export default function App() {
               />
             </div>
 
-            {/* Lower Voice Console HUD controls */}
+            {/* Lower Voice Console HUD controls with Mobile Quick Pins */}
             <DriveAssistant
               onAddNote={handleAddNote}
               currentLocation={currentLocation}
               setCurrentLocation={setCurrentLocation}
               isOffline={isOffline}
+              notes={notes}
+              onSelectNote={setSelectedNote}
+              onDeleteNote={handleDeleteNote}
+              selectedNote={selectedNote}
             />
           </div>
         ) : (
