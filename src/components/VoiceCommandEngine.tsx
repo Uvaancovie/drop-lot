@@ -3,14 +3,16 @@ import { Mic, MicOff, Volume2, HelpCircle, AlertTriangle, Play, Sparkles } from 
 
 interface VoiceCommandEngineProps {
   onRecordVoiceNote: (text: string, category: string, voiceCommandUsed?: string) => void;
-  isDriving: boolean;
-  isOffline: boolean;
+  isDriving?: boolean;
+  isOffline?: boolean;
+  audioFeedbackEnabled?: boolean;
 }
 
 export default function VoiceCommandEngine({
   onRecordVoiceNote,
-  isDriving,
-  isOffline
+  isDriving = true,
+  isOffline = false,
+  audioFeedbackEnabled = true
 }: VoiceCommandEngineProps) {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -23,6 +25,22 @@ export default function VoiceCommandEngine({
   const recognitionRef = useRef<any>(null);
   const waveCanvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number | null>(null);
+
+  // Text-To-Speech Audio Feedback for Hands-Free Driving
+  const speakAudioConfirmation = (text: string) => {
+    if (audioFeedbackEnabled && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+        window.speechSynthesis.speak(utterance);
+      } catch (e) {
+        console.warn('Speech synthesis failed:', e);
+      }
+    }
+  };
 
   // Initialize Speech Recognition
   useEffect(() => {
@@ -142,33 +160,42 @@ export default function VoiceCommandEngine({
   // Command Parser
   const processSpokenText = (text: string) => {
     const cleanText = text.toLowerCase().trim();
+    if (!cleanText) return;
     
     // Command pattern matching:
-    // "record note [content]" -> Records note under default 'Commercial' or custom category
-    // "tag location as [category]" -> Tags current location with specific category
-    // "tag premises as [category]" -> Tags current location with specific category
-    // "emergency tag" -> tags with 'Safety' category
-    
-    if (cleanText.startsWith('record note')) {
-      const noteContent = text.slice(11).trim();
-      if (noteContent) {
-        onRecordVoiceNote(noteContent, 'Commercial', 'record note');
-        triggerAestheticNotification('Note Recorded via Hands-Free Command');
-      }
-    } else if (cleanText.startsWith('tag location as') || cleanText.startsWith('tag premises as')) {
-      const category = text.split(' as ')[1]?.trim();
-      if (category) {
-        const capitalizedCategory = category.charAt(0).toUpperCase() + category.slice(1);
-        onRecordVoiceNote('Manually tagged driving landmark', capitalizedCategory, 'tag location');
-        triggerAestheticNotification(`Tagged Location as: ${capitalizedCategory}`);
-      }
-    } else if (cleanText.includes('emergency tag') || cleanText.includes('hazard')) {
-      onRecordVoiceNote('Safety hazard or road incident noticed', 'Safety', 'emergency tag');
-      triggerAestheticNotification('Emergency Safety Point Registered');
+    if (cleanText.startsWith('record note') || cleanText.startsWith('take note') || cleanText.startsWith('remember')) {
+      let noteContent = text.replace(/^(record note|take note|remember)/i, '').trim();
+      if (!noteContent) noteContent = 'Voice note recorded';
+      onRecordVoiceNote(noteContent, 'Voice Note', 'record note');
+      triggerAestheticNotification('Note Recorded via Hands-Free Command');
+      speakAudioConfirmation(`Note saved: ${noteContent.slice(0, 30)}`);
+    } else if (cleanText.startsWith('tag location as') || cleanText.startsWith('tag as') || cleanText.startsWith('tag premises as')) {
+      const category = text.split(/\s+as\s+/i)[1]?.trim() || 'Custom Tag';
+      const capitalizedCategory = category.charAt(0).toUpperCase() + category.slice(1);
+      onRecordVoiceNote(`Tagged location as ${capitalizedCategory}`, capitalizedCategory, 'tag location');
+      triggerAestheticNotification(`Tagged Location as: ${capitalizedCategory}`);
+      speakAudioConfirmation(`Location tagged as ${capitalizedCategory}`);
+    } else if (cleanText.includes('emergency') || cleanText.includes('hazard') || cleanText.includes('pothole') || cleanText.includes('danger')) {
+      onRecordVoiceNote('Road hazard or safety incident recorded', 'Safety', 'hazard');
+      triggerAestheticNotification('Road Safety Hazard Logged');
+      speakAudioConfirmation('Safety hazard logged at current location');
+    } else if (cleanText.includes('traffic') || cleanText.includes('jam')) {
+      onRecordVoiceNote('Traffic delay or heavy traffic logged', 'Traffic', 'traffic');
+      triggerAestheticNotification('Traffic Alert Logged');
+      speakAudioConfirmation('Traffic alert logged');
+    } else if (cleanText.includes('fuel') || cleanText.includes('gas') || cleanText.includes('rest stop')) {
+      onRecordVoiceNote('Fuel or rest stop location logged', 'Rest Stop', 'fuel');
+      triggerAestheticNotification('Fuel / Rest Stop Logged');
+      speakAudioConfirmation('Fuel stop logged');
+    } else if (cleanText.includes('pin') || cleanText.includes('save location') || cleanText.includes('mark location')) {
+      onRecordVoiceNote('Current driving coordinates pinned', 'Saved Location', 'pin location');
+      triggerAestheticNotification('Location Pinned Successfully');
+      speakAudioConfirmation('Location pinned at current position');
     } else {
       // General voice note capture as default fallback
-      onRecordVoiceNote(text, 'Commercial', 'generic voice note');
-      triggerAestheticNotification('Voice Note Extracted');
+      onRecordVoiceNote(text, 'Voice Note', 'voice capture');
+      triggerAestheticNotification('Voice Note Recorded');
+      speakAudioConfirmation(`Voice note recorded: ${text.slice(0, 30)}`);
     }
   };
 

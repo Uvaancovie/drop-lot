@@ -416,6 +416,7 @@ export default function App() {
               onAddNote={handleAddNote}
               currentLocation={currentLocation}
               setCurrentLocation={setCurrentLocation}
+              isOffline={isOffline}
             />
           </div>
         ) : (
